@@ -25,7 +25,6 @@ dist-ssr
 *.env
 *.psd
 
-public/fonts/
 public/assets/psd/
 
 # Tauri / Rust
@@ -52,3 +51,8 @@ src-tauri/gen/android/app/src/main/assets/tauri.conf.json
 src-tauri/gen/android/app/tauri.build.gradle.kts
 src-tauri/gen/android/app/proguard-tauri.pro
 src-tauri/gen/android/app/tauri.properties
+
+# Local browser automation artifacts
+.playwright-mcp/
+AGENTS.md
+GEMINI.md
