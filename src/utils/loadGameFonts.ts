@@ -7,6 +7,10 @@ const GAME_FONTS = [
         family: 'BrushScriptStd',
         source: 'url("/fonts/BrushScriptStd.otf") format("opentype")',
     },
+    {
+        family: 'Xiaolai',
+        source: 'url("/fonts/Xiaolai-Regular.ttf") format("truetype")',
+    },
 ] as const;
 
 let gameFontsPromise: Promise<void> | null = null;

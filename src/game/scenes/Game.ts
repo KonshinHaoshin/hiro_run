@@ -78,14 +78,14 @@ export class Game extends Scene {
 
         // score label
         this.scoreLabel = this.add.text(30, 20, 'Time:', {
-            fontFamily: 'BrushScriptStd',
-            fontSize: '42px',
+            fontFamily: 'Xiaolai',
+            fontSize: '38px',
             color: '#fff',
         }).setScrollFactor(0, 1);
 
         this.scoreValueLabel = this.add.text(150, 16, '0', {
-            fontFamily: 'BrushScriptStd',
-            fontSize: '42px',
+            fontFamily: 'Xiaolai',
+            fontSize: '38px',
             color: '#fff',
         }).setScrollFactor(0, 1);
 
@@ -104,22 +104,22 @@ export class Game extends Scene {
             .setAngle(-12)
             .setScrollFactor(0, 1);
         this.starsValueLabel = this.add.text(settings.gameWidth - 92, 58, `${this.stars}`, {
-            fontFamily: 'BrushScriptStd',
-            fontSize: '50px',
+            fontFamily: 'Xiaolai',
+            fontSize: '44px',
             color: '#fff4cf',
         }).setOrigin(0, 0.5).setScrollFactor(0, 1);
 
         // get user best score
         this.bestScore = settings.bestScore
         this.bestScoreLabel = this.add.text(30, 60, 'Best Time:', {
-            fontFamily: 'BrushScriptStd',
-            fontSize: '30px',
+            fontFamily: 'Xiaolai',
+            fontSize: '28px',
             color: '#fff',
         }).setScrollFactor(0, 1);
 
         this.bestScoreValueLabel = this.add.text(195, 56, `${this.bestScore}`, {
-            fontFamily: 'BrushScriptStd',
-            fontSize: '42px',
+            fontFamily: 'Xiaolai',
+            fontSize: '38px',
             color: '#fff',
         }).setScrollFactor(0, 1);
 
@@ -193,8 +193,10 @@ export class Game extends Scene {
         // RAVEN
         this.bird = this.physics.add.sprite(settings.gameWidth + 100, 180, 'bird').setScale(0.17);
         this.bird.setFlipX(true);
-        (this.bird.body as Phaser.Physics.Arcade.Body)?.setAllowGravity(false);
-        (this.bird.body as Phaser.Physics.Arcade.Body).enable = false;
+        const birdBody = this.bird.body as Phaser.Physics.Arcade.Body;
+        birdBody.setAllowGravity(false);
+        birdBody.setSize(180, 150, true);
+        birdBody.enable = false;
         this.bird.setActive(false).setVisible(false);
 
         // set raven velocity 50 dist/s less than player speed
@@ -479,7 +481,8 @@ export class Game extends Scene {
         const body = spear.body as Phaser.Physics.Arcade.Body;
         body.setAllowGravity(false);
         body.setImmovable(true);
-        body.setSize(42, 126, true);
+        body.setSize(24, 86, true);
+        body.setOffset((spear.width - 24) / 2, spear.height - 114);
 
         return true;
     }
@@ -503,7 +506,7 @@ export class Game extends Scene {
 
     createStar(x: number, y: number) {
         const star = this.starsGroup.create(x, y, 'star') as Phaser.Physics.Arcade.Image;
-        star.setScale(0.11);
+        star.setScale(0.18);
         star.setAngle(Phaser.Math.Between(-14, 14));
 
         const body = star.body as Phaser.Physics.Arcade.Body;
