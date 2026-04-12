@@ -3,18 +3,15 @@ import { IRefPhaserGame, PhaserGame } from "./game/PhaserGame";
 import {
     isLandscapeViewport,
     isMobileRuntime,
-    requestLandscapeOrientation,
+    requestMobileImmersiveMode,
 } from "./utils/runtime";
 
 function App() {
-    //  References to the PhaserGame component (game and scene are exposed)
     const phaserRef = useRef<IRefPhaserGame | null>(null);
     const [isLandscape, setIsLandscape] = useState(() => isLandscapeViewport());
     const isMobile = useMemo(() => isMobileRuntime(), []);
 
-    // Event emitted from the PhaserGame component
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const currentScene = (scene: Phaser.Scene) => {
+    const currentScene = (_scene: Phaser.Scene) => {
         //
     };
 
@@ -27,19 +24,21 @@ function App() {
         const syncViewport = () => {
             setIsLandscape(mediaQuery.matches);
         };
-        const lockOrientation = () => {
-            void requestLandscapeOrientation();
+        const enterImmersiveMode = () => {
+            void requestMobileImmersiveMode();
         };
 
         syncViewport();
-        lockOrientation();
+        enterImmersiveMode();
 
         mediaQuery.addEventListener("change", syncViewport);
-        window.addEventListener("pointerdown", lockOrientation, { passive: true });
+        window.addEventListener("pointerdown", enterImmersiveMode, { passive: true });
+        window.addEventListener("touchend", enterImmersiveMode, { passive: true });
 
         return () => {
             mediaQuery.removeEventListener("change", syncViewport);
-            window.removeEventListener("pointerdown", lockOrientation);
+            window.removeEventListener("pointerdown", enterImmersiveMode);
+            window.removeEventListener("touchend", enterImmersiveMode);
         };
     }, [isMobile]);
 
@@ -55,9 +54,9 @@ function App() {
             {isMobile && !isLandscape && (
                 <div className="mobile-rotate-hint">
                     <div className="mobile-rotate-card">
-                        <div className="mobile-rotate-title">请横屏游玩</div>
+                        <div className="mobile-rotate-title">Rotate Device</div>
                         <div className="mobile-rotate-copy">
-                            已为移动端默认横屏显示。若当前仍为竖屏，请旋转设备后继续。
+                            Fullscreen and landscape were requested for mobile. If you are still in portrait, rotate the device to continue.
                         </div>
                     </div>
                 </div>

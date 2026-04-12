@@ -4,6 +4,7 @@ import { createElement, ShoppingBag, Volume2, VolumeX } from 'lucide';
 import { EventBus } from '../EventBus';
 import config from '../../utils/config';
 import createTextLink from '../../utils/createTextLink';
+import { isMobileRuntime } from '../../utils/runtime';
 
 const createAudioIconMarkup = (muted: boolean) => createElement(muted ? VolumeX : Volume2, {
     width: 22,
@@ -37,9 +38,19 @@ export class MainMenu extends Scene {
     preload() {
         this.load.setPath('assets');
 
-        this.load.spritesheet('player', 'characterSprite.png', {
-          frameWidth: 905,
-          frameHeight: 1035,
+        const playerSheet = isMobileRuntime() ? {
+            file: 'characterSpriteMobile.png',
+            frameWidth: 840,
+            frameHeight: 960,
+        } : {
+            file: 'characterSprite.png',
+            frameWidth: 905,
+            frameHeight: 1035,
+        };
+
+        this.load.spritesheet('player', playerSheet.file, {
+          frameWidth: playerSheet.frameWidth,
+          frameHeight: playerSheet.frameHeight,
         });
         this.load.spritesheet('bird', 'bird.png', {
           frameHeight: 341,
@@ -165,3 +176,4 @@ export class MainMenu extends Scene {
         this.scene.start('Shop');
     }
 }
+
