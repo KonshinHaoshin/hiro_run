@@ -503,7 +503,7 @@ export class Game extends Scene {
 
     createStar(x: number, y: number) {
         const star = this.starsGroup.create(x, y, 'star') as Phaser.Physics.Arcade.Image;
-        star.setScale(0.085);
+        star.setScale(0.11);
         star.setAngle(Phaser.Math.Between(-14, 14));
 
         const body = star.body as Phaser.Physics.Arcade.Body;
@@ -719,3 +719,4 @@ export class Game extends Scene {
         };
     }
 }
+

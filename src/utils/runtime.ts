@@ -7,6 +7,10 @@ type NavigatorWithUAData = Navigator & {
     };
 };
 
+type FullscreenElement = HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+};
+
 export const isMobileRuntime = () => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
         return false;
@@ -44,4 +48,38 @@ export const requestLandscapeOrientation = async () => {
     } catch {
         return false;
     }
+};
+
+export const requestMobileFullscreen = async () => {
+    if (typeof document === "undefined" || !isMobileRuntime() || document.fullscreenElement) {
+        return false;
+    }
+
+    const fullscreenTarget = document.getElementById("app") || document.documentElement;
+    const requestFullscreen = fullscreenTarget.requestFullscreen ||
+        (fullscreenTarget as FullscreenElement).webkitRequestFullscreen;
+
+    if (!requestFullscreen) {
+        return false;
+    }
+
+    try {
+        await requestFullscreen.call(fullscreenTarget, { navigationUI: "hide" });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+export const requestMobileImmersiveMode = async () => {
+    if (!isMobileRuntime()) {
+        return false;
+    }
+
+    const [fullscreenResult, orientationResult] = await Promise.all([
+        requestMobileFullscreen(),
+        requestLandscapeOrientation(),
+    ]);
+
+    return fullscreenResult || orientationResult;
 };
