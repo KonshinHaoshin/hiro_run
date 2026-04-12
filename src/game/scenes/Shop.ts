@@ -39,7 +39,7 @@ const SHOP_ITEMS: ShopItemConfig[] = [
     },
 ];
 
-const CN_FONT = '"Microsoft YaHei", "PingFang SC", sans-serif';
+const SHOP_FONT = 'Xiaolai';
 
 export class Shop extends Scene {
     stars: number;
@@ -57,7 +57,7 @@ export class Shop extends Scene {
         this.add.rectangle(centerX, centerY, config.gameWidth, config.gameHeight, 0x100f12, 0.56);
 
         this.add.text(centerX, 108, 'SHOP', {
-            fontFamily: 'Bushiroad',
+            fontFamily: 'Xiaolai',
             fontSize: '86px',
             color: '#f3e8cd',
         }).setOrigin(0.5);
@@ -82,7 +82,7 @@ export class Shop extends Scene {
         star.setAngle(-12);
 
         const value = this.add.text(12, 0, `${stars}`, {
-            fontFamily: 'Bushiroad',
+            fontFamily: 'Xiaolai',
             fontSize: '40px',
             color: '#fff4cf',
         }).setOrigin(0.5);
@@ -112,7 +112,7 @@ export class Shop extends Scene {
             star.setAngle(-8);
 
             const title = this.add.text(0, -20, display.title, {
-                fontFamily: CN_FONT,
+                fontFamily: SHOP_FONT,
                 fontSize: '30px',
                 color: '#f3e8cd',
                 align: 'center',
@@ -121,7 +121,7 @@ export class Shop extends Scene {
             }).setOrigin(0.5);
 
             const subtitle = this.add.text(0, 36, display.subtitle, {
-                fontFamily: CN_FONT,
+                fontFamily: SHOP_FONT,
                 fontSize: '22px',
                 color: '#efe9dc',
                 align: 'center',
@@ -132,7 +132,7 @@ export class Shop extends Scene {
             actionBar.setStrokeStyle(1, 0xf3e8cd, itemState === 'available' ? 0.24 : 0.12);
 
             const actionLabel = this.add.text(0, itemState === 'available' || itemState === 'locked' ? 94 : 108, this.getActionLabel(itemState), {
-                fontFamily: CN_FONT,
+                fontFamily: SHOP_FONT,
                 fontSize: '20px',
                 color: itemState === 'available' ? '#fff7dd' : '#d6cfbf',
                 fontStyle: '700',
@@ -143,7 +143,7 @@ export class Shop extends Scene {
             priceStar.setVisible(itemState === 'available' || itemState === 'locked');
 
             const price = this.add.text(20, 122, `${item.price}`, {
-                fontFamily: 'Bushiroad',
+                fontFamily: 'Xiaolai',
                 fontSize: '24px',
                 color: '#fff4cf',
             }).setOrigin(0.5);
@@ -162,7 +162,7 @@ export class Shop extends Scene {
         });
 
         this.add.text(centerX, y + 220, '购买道具后，下一回合开始会生效。', {
-            fontFamily: CN_FONT,
+            fontFamily: SHOP_FONT,
             fontSize: '22px',
             color: '#d9d3c5',
         }).setOrigin(0.5);
@@ -170,7 +170,7 @@ export class Shop extends Scene {
 
     createBackLink(x: number, y: number) {
         const label = this.add.text(0, 0, 'BACK MENU', {
-            fontFamily: 'Bushiroad',
+            fontFamily: 'Xiaolai',
             fontSize: '28px',
             color: '#f4f0d8',
         }).setOrigin(0.5);

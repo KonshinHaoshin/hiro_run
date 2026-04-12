@@ -5,6 +5,7 @@ import {
     isMobileRuntime,
     requestMobileImmersiveMode,
 } from "./utils/runtime";
+import { initShelterBridge } from "./utils/shelterBridge";
 
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
@@ -14,6 +15,14 @@ function App() {
     const currentScene = (_scene: Phaser.Scene) => {
         //
     };
+
+    useEffect(() => {
+        const cleanupBridge = initShelterBridge();
+
+        return () => {
+            cleanupBridge();
+        };
+    }, []);
 
     useEffect(() => {
         if (!isMobile) {
