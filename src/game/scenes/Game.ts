@@ -4,6 +4,11 @@ import { Scene } from 'phaser';
 import Phaser from 'phaser';
 import settings, { getPlayerJumpCount, getStoredStars, setStoredStars } from '../../utils/config';
 
+const GROUND_LEFT_EDGE_TEXTURE_KEY = 'ground-left-edge';
+const GROUND_RIGHT_EDGE_TEXTURE_KEY = 'ground-right-edge';
+const GROUND_CORNER_RADIUS = 18;
+const GROUND_EDGE_BLOCKS = 2;
+
 export class Game extends Scene {
     background: Phaser.GameObjects.Image;
     platforms: Phaser.Physics.Arcade.StaticGroup;
@@ -146,7 +151,8 @@ export class Game extends Scene {
 
         // initial ground position
         this.groundY = settings.gameHeight - 110;
-        const initialPlatform = this.platforms.create(-120, this.groundY, 'ground').setOrigin(0);
+        this.ensureGroundEdgeTextures();
+        const initialPlatform = this.createPhysicsPlatform(-120, settings.gameWidth + 520);
         initialPlatform.displayWidth = settings.gameWidth + 520;
         const initialPlatformBody = initialPlatform.body as Phaser.Physics.Arcade.StaticBody;
         initialPlatformBody.updateFromGameObject();
@@ -276,6 +282,7 @@ export class Game extends Scene {
 
             if (this.player.x > (platformRightEdge + 320)) {
                 this.createPlatform();
+                this.destroyPlatformVisuals(platformSprite);
                 this.platforms.remove(platform, true);
             }
         });
@@ -329,16 +336,16 @@ export class Game extends Scene {
 
     createPlatform() {
         const platformX = this.groundX;
-        this.newPlatform = this.platforms.create(platformX, this.groundY, 'ground').setOrigin(0);
-        this.newPlatform.displayWidth = Phaser.Math.Between(
+        const platformWidth = Phaser.Math.Between(
             this.currentGroundSizeRange[0], this.currentGroundSizeRange[1],
         );
+        this.newPlatform = this.createPhysicsPlatform(platformX, platformWidth);
 
-        const spawnedSpear = this.spawnSpearForPlatform(platformX, this.newPlatform.displayWidth);
+        const spawnedSpear = this.spawnSpearForPlatform(platformX, platformWidth);
         if (!spawnedSpear) {
-            this.spawnStarsForPlatform(platformX, this.newPlatform.displayWidth);
+            this.spawnStarsForPlatform(platformX, platformWidth);
         }
-        this.groundX += (this.newPlatform.displayWidth + Phaser.Math.Between(
+        this.groundX += (platformWidth + Phaser.Math.Between(
             this.currentGroundSpaceRange[0], this.currentGroundSpaceRange[1],
         ));
 
@@ -346,6 +353,112 @@ export class Game extends Scene {
             body,
         } = this.newPlatform;
         body?.updateFromGameObject();
+    }
+
+    createPhysicsPlatform(x: number, width: number) {
+        const platform = this.platforms.create(x, this.groundY, 'ground').setOrigin(0);
+        platform.displayWidth = width;
+        platform.setVisible(false);
+        platform.setData('visuals', this.createPlatformVisuals(x, width));
+
+        return platform;
+    }
+
+    createPlatformVisuals(x: number, width: number) {
+        const sourceImage = this.textures.get('ground').getSourceImage() as CanvasImageSource;
+        const height = Number(sourceImage.height);
+        const edgeWidth = Math.min(height * GROUND_EDGE_BLOCKS, width / 2);
+        const middleWidth = Math.max(0, width - edgeWidth * 2);
+
+        const leftEdge = this.add.image(x, this.groundY, GROUND_LEFT_EDGE_TEXTURE_KEY)
+            .setOrigin(0)
+            .setDisplaySize(edgeWidth, height);
+        const middle = this.add.image(x + edgeWidth, this.groundY, 'ground')
+            .setOrigin(0)
+            .setDisplaySize(middleWidth, height);
+        const rightEdge = this.add.image(x + edgeWidth + middleWidth, this.groundY, GROUND_RIGHT_EDGE_TEXTURE_KEY)
+            .setOrigin(0)
+            .setDisplaySize(edgeWidth, height);
+
+        return [leftEdge, middle, rightEdge];
+    }
+
+    destroyPlatformVisuals(platform: Phaser.Physics.Arcade.Sprite) {
+        const visuals = platform.getData('visuals') as Phaser.GameObjects.GameObject[] | undefined;
+        visuals?.forEach((visual) => visual.destroy());
+    }
+
+    ensureGroundEdgeTextures() {
+        if (this.textures.exists(GROUND_LEFT_EDGE_TEXTURE_KEY) && this.textures.exists(GROUND_RIGHT_EDGE_TEXTURE_KEY)) {
+            return;
+        }
+
+        const sourceImage = this.textures.get('ground').getSourceImage() as CanvasImageSource;
+        const width = Number(sourceImage.width);
+        const height = Number(sourceImage.height);
+        const edgeWidth = Math.min(height * GROUND_EDGE_BLOCKS, width / 2);
+        const radius = Math.min(GROUND_CORNER_RADIUS, edgeWidth / 2, height / 2);
+
+        this.createGroundEdgeTexture(GROUND_LEFT_EDGE_TEXTURE_KEY, sourceImage, 0, edgeWidth, height, radius, 'left');
+        this.createGroundEdgeTexture(GROUND_RIGHT_EDGE_TEXTURE_KEY, sourceImage, width - edgeWidth, edgeWidth, height, radius, 'right');
+    }
+
+    createGroundEdgeTexture(
+        key: string,
+        sourceImage: CanvasImageSource,
+        sourceX: number,
+        width: number,
+        height: number,
+        radius: number,
+        side: 'left' | 'right',
+    ) {
+        const canvasTexture = this.textures.createCanvas(key, width, height);
+
+        if (!canvasTexture) {
+            return;
+        }
+
+        const context = canvasTexture.context;
+
+        context.save();
+        this.drawGroundEdgePath(context, 0, 0, width, height, radius, side);
+        context.clip();
+        context.drawImage(sourceImage, sourceX, 0, width, height, 0, 0, width, height);
+        context.restore();
+        canvasTexture.refresh();
+    }
+
+    drawGroundEdgePath(
+        context: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        radius: number,
+        side: 'left' | 'right',
+    ) {
+        const roundLeft = side === 'left';
+        const roundRight = side === 'right';
+
+        context.beginPath();
+        context.moveTo(x + (roundLeft ? radius : 0), y);
+        context.lineTo(x + width - (roundRight ? radius : 0), y);
+        if (roundRight) {
+            context.quadraticCurveTo(x + width, y, x + width, y + radius);
+        }
+        context.lineTo(x + width, y + height - (roundRight ? radius : 0));
+        if (roundRight) {
+            context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        }
+        context.lineTo(x + (roundLeft ? radius : 0), y + height);
+        if (roundLeft) {
+            context.quadraticCurveTo(x, y + height, x, y + height - radius);
+        }
+        context.lineTo(x, y + (roundLeft ? radius : 0));
+        if (roundLeft) {
+            context.quadraticCurveTo(x, y, x + radius, y);
+        }
+        context.closePath();
     }
 
     spawnSpearForPlatform(platformX: number, platformWidth: number) {
