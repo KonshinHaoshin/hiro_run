@@ -10,16 +10,21 @@ export class Preloader extends Scene {
         const progressBar = this.add.graphics();
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
-        progressBox.fillRect(240, 270, 320, 50);
 
         const { width } = this.cameras.main;
         const { height } = this.cameras.main;
+        const boxWidth = 420;
+        const boxHeight = 56;
+        const boxX = width / 2 - boxWidth / 2;
+        const boxY = height / 2 + 10;
+        progressBox.fillRect(boxX, boxY, boxWidth, boxHeight);
         const loadingText = this.make.text({
             x: width / 2,
             y: height / 2 - 50,
             text: 'Loading...',
             style: {
-                font: '20px monospace',
+                fontFamily: 'BrushScriptStd',
+                fontSize: '20px',
                 color: '#ffffff',
             },
         });
@@ -30,7 +35,8 @@ export class Preloader extends Scene {
             y: height / 2 - 5,
             text: '0%',
             style: {
-                font: '18px monospace',
+                fontFamily: 'BrushScriptStd',
+                fontSize: '28px',
                 color: '#ffffff',
             },
         });
@@ -41,7 +47,8 @@ export class Preloader extends Scene {
             y: height / 2 + 50,
             text: '',
             style: {
-                font: '18px monospace',
+                fontFamily: 'BrushScriptStd',
+                fontSize: '18px',
                 color: '#ffffff',
             },
         });
@@ -53,7 +60,7 @@ export class Preloader extends Scene {
             percentText.setText(`${parseInt(String(value * 100))}%`);
             progressBar.clear();
             progressBar.fillStyle(0xffffff, 1);
-            progressBar.fillRect(250, 280, 300 * value, 30);
+            progressBar.fillRect(boxX + 10, boxY + 10, (boxWidth - 20) * value, boxHeight - 20);
         });
 
         // update file progress text
@@ -80,19 +87,33 @@ export class Preloader extends Scene {
         this.load.audio('jump', 'sound/jump.mp3');
         this.load.audio('run', 'sound/footstep.mp3');
 
-        this.load.image('startBtn', 'start_btn.png');
-        this.load.image('leaderboard', 'leaderboard.png');
         this.load.image('ground', 'ground.png');
-        this.load.image('gameOver', 'gameOver.png');
-        this.load.image('restartBtn', 'restart_btn.png');
-        this.load.image('quitBtn', 'quit_btn.png');
-        this.load.image('backBtn', 'back_btn.png');
-        this.load.image('resetBtn', 'reset_btn.png');
-        this.load.image('muteBtn', 'mute.png');
-        this.load.image('unmuteBtn', 'unmute.png');
+        this.load.image('spear', 'simplespear.png');
+        this.load.image('star', 'star.png');
     }
 
     create() {
+        void this.startMainMenuWhenFontsReady();
+    }
+
+    private async startMainMenuWhenFontsReady() {
+        if ('fonts' in document) {
+            try {
+                const fontFaceSet = document.fonts;
+                await Promise.race([
+                    Promise.all([
+                        fontFaceSet.load('84px "Bushiroad"'),
+                        fontFaceSet.load('28px "BrushScriptStd"'),
+                    ]),
+                    new Promise((resolve) => {
+                        window.setTimeout(resolve, 3000);
+                    }),
+                ]);
+            } catch {
+                // Continue into the menu even if the browser cannot pre-load fonts explicitly.
+            }
+        }
+
         this.scene.start('MainMenu');
     }
 }

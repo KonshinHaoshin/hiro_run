@@ -1,16 +1,34 @@
 import { GameObjects, Scene } from 'phaser';
+import { createElement, ShoppingBag, Volume2, VolumeX } from 'lucide';
 
 import { EventBus } from '../EventBus';
-import hoverEffect from '../../utils/hoverEffect';
-import Form from '../../utils/usernameForm';
 import config from '../../utils/config';
-import { fetchUserBestScore } from '../../utils/leaderBoardAPI';
+import createTextLink from '../../utils/createTextLink';
+
+const createAudioIconMarkup = (muted: boolean) => createElement(muted ? VolumeX : Volume2, {
+    width: 22,
+    height: 22,
+    color: muted ? '#f3d7d0' : '#eff4ee',
+    stroke: muted ? '#f3d7d0' : '#eff4ee',
+    'stroke-width': 2.1,
+    'aria-hidden': 'true',
+}).outerHTML;
+
+const createShopIconMarkup = (stars: number) => `${createElement(ShoppingBag, {
+    width: 22,
+    height: 22,
+    color: '#fff0cf',
+    stroke: '#fff0cf',
+    'stroke-width': 2.1,
+    'aria-hidden': 'true',
+}).outerHTML}<span class="menu-shop-badge"><img src="assets/star.png" alt="" /><span>${stars}</span></span>`;
+
 export class MainMenu extends Scene {
     background: GameObjects.Image;
-    startBtn: GameObjects.Image;
-    resetBtn: GameObjects.Image;
-    leaderboardBtn: GameObjects.Image;
-    audioBtn: GameObjects.Image;
+    startBtn: Phaser.GameObjects.Container;
+    resetBtn: Phaser.GameObjects.Container;
+    audioBtn: Phaser.GameObjects.DOMElement;
+    shopBtn: Phaser.GameObjects.DOMElement;
 
     constructor() {
         super('MainMenu');
@@ -19,77 +37,131 @@ export class MainMenu extends Scene {
     preload() {
         this.load.setPath('assets');
 
-        this.load.spritesheet('player', 'characterSprite2.png', {
-          frameWidth: 500,
-          frameHeight: 632,
+        this.load.spritesheet('player', 'characterSprite.png', {
+          frameWidth: 905,
+          frameHeight: 1035,
         });
-        this.load.spritesheet('bird', 'birdSprite.png', {
-          frameHeight: 416,
-          frameWidth: 416,
+        this.load.spritesheet('bird', 'bird.png', {
+          frameHeight: 341,
+          frameWidth: 341,
+        });
+        this.load.spritesheet('warden', 'kanshou.png', {
+          frameHeight: 256,
+          frameWidth: 256,
         });
       }
 
     create() {
-        this.background = this.add.image(400, 225, 'background');
-        this.startBtn = this.add.image(400, 150, 'startBtn');
-        this.resetBtn = this.add.image(400, 230, 'resetBtn');
-        this.leaderboardBtn = this.add.image(400, 350, 'leaderboard');
-        this.audioBtn = this.add.image(80, 400, config.sound ? 'muteBtn' : 'unmuteBtn');
-        this.sound.mute = config.sound;
+        const centerX = config.gameWidth / 2;
+        const centerY = config.gameHeight / 2;
 
-        // Add hover effects
-        hoverEffect(this.startBtn, 1.05);
-        hoverEffect(this.resetBtn, 1.05);
-        hoverEffect(this.leaderboardBtn, 1.05);
-        hoverEffect(this.audioBtn, 1.05);
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        this.background = this.add.image(width / 2, height / 2, 'background');
+        
+        // Calculate scale to fill screen while keeping aspect ratio (Cover)
+        const scaleX = width / this.background.width;
+        const scaleY = height / this.background.height;
+        const scale = Math.max(scaleX, scaleY);
+        this.background.setScale(scale).setScrollFactor(0);
+        this.background.setDepth(-10);
+
+        const title = this.add.text(centerX, 150, 'HIRO RUN', {
+            fontFamily: 'Bushiroad',
+            fontSize: '92px',
+            color: '#c93a2f',
+        }).setOrigin(0.5);
+
+        // Add a floating animation to the title
+        this.tweens.add({
+            targets: title,
+            y: 160,
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Add a slight color shift/glow to the title
+        this.tweens.add({
+            targets: title,
+            alpha: 0.8,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Quad.easeInOut'
+        });
+
+        this.startBtn = createTextLink(this, centerX, 0, 'start game', this.changeScene.bind(this), {
+            fontSize: 40,
+            color: '#ffffff',
+            backgroundPaddingX: 56,
+            underlineOffsetY: 18,
+        });
+        this.resetBtn = createTextLink(this, centerX, 0, 'clear record', () => {
+            localStorage.removeItem('bestScore');
+            window.location.reload();
+        }, {
+            fontSize: 40,
+            color: '#ffffff',
+            backgroundPaddingX: 56,
+            underlineOffsetY: 18,
+        });
+
+        const buttonGap = 28;
+        const totalHeight = this.startBtn.height + this.resetBtn.height + buttonGap;
+        const startY = centerY - totalHeight / 2;
+        this.startBtn.setY(startY + this.startBtn.height / 2);
+        this.resetBtn.setY(this.startBtn.y + this.startBtn.height / 2 + buttonGap + this.resetBtn.height / 2);
+
+        this.audioBtn = this.add.dom(82, config.gameHeight - 76, 'button');
+        this.audioBtn.setScrollFactor(0);
+        this.audioBtn.setDepth(20);
+
+        const audioButtonNode = this.audioBtn.node as HTMLButtonElement;
+        audioButtonNode.type = 'button';
+        audioButtonNode.className = 'menu-audio-toggle';
+
+        const updateAudioButton = () => {
+            audioButtonNode.classList.toggle('is-muted', config.sound);
+            audioButtonNode.setAttribute('aria-label', config.sound ? 'Unmute sound' : 'Mute sound');
+            audioButtonNode.innerHTML = createAudioIconMarkup(config.sound);
+        };
+
+        this.sound.mute = config.sound;
+        updateAudioButton();
+
+        this.shopBtn = this.add.dom(config.gameWidth - 82, config.gameHeight - 76, 'button');
+        this.shopBtn.setScrollFactor(0);
+        this.shopBtn.setDepth(20);
+
+        const shopButtonNode = this.shopBtn.node as HTMLButtonElement;
+        const stars = Number(localStorage.getItem('stars') || '0');
+        shopButtonNode.type = 'button';
+        shopButtonNode.className = 'menu-shop-toggle';
+        shopButtonNode.setAttribute('aria-label', 'Open shop');
+        shopButtonNode.innerHTML = createShopIconMarkup(stars);
 
         EventBus.emit('current-scene-ready', this);
 
-    if (config.username) {
-      Form.display(config.username, this);
-    } else {
-      Form.enter(this);
+        audioButtonNode.addEventListener('click', () => {
+            config.sound = !config.sound;
+            this.sound.mute = config.sound;
+            localStorage.setItem('sound', String(config.sound));
+            updateAudioButton();
+        });
+
+        shopButtonNode.addEventListener('click', () => {
+            this.openShop();
+        });
     }
 
-    this.startBtn.on('pointerup', this.changeScene.bind(this));
-
-    this.resetBtn.on('pointerup', () => {
-      localStorage.clear();
-      window.location.reload();
-    });
-
-    this.leaderboardBtn.on('pointerup', () => {
-      this.scene.start('Rank');
-    });
-
-    this.audioBtn.on('pointerup', () => {
-      config.sound = !config.sound;
-      this.sound.mute = config.sound;
-
-      if (config.sound) {
-        this.audioBtn.setTexture('muteBtn');
-      } else {
-        this.audioBtn.setTexture('unmuteBtn');
-      }
-
-      localStorage.setItem('sound', String(config.sound));
-    });
-
-    this.events.on('shutdown', () => {
-      Form.remove();
-    });
+    changeScene() {
+        this.scene.start('Game');
     }
 
-    async changeScene() {
-        if (config.username) {
-            if (!config.bestScore) {
-                await fetchUserBestScore();
-            }
-            this.scene.start('Game');
-          } else {
-            // display warning
-            const alertBox = document.querySelector('.username-alert');
-            alertBox?.classList.add('show-warning');
-          }
+    openShop() {
+        this.scene.start('Shop');
     }
 }

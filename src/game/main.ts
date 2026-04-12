@@ -2,17 +2,25 @@ import { Boot } from './scenes/Boot';
 import { GameOver } from './scenes/GameOver';
 import { Game as MainGame } from './scenes/Game';
 import { MainMenu } from './scenes/MainMenu';
-import { AUTO, Game } from 'phaser';
+import { Shop } from './scenes/Shop';
+import { AUTO, Game, Scale } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import cg from '../utils/config';
-import '../../public/style.css';
-import { Rank } from './scenes/Rank';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: cg.gameWidth,
     height: cg.gameHeight,
     parent: 'game-container',
+    scale: {
+        mode: Scale.FIT,
+        autoCenter: Scale.CENTER_BOTH,
+        width: cg.gameWidth,
+        height: cg.gameHeight,
+    },
+    dom: {
+        createContainer: true,
+    },
     physics: {
         default: 'arcade',
         arcade: {
@@ -20,16 +28,16 @@ const config: Phaser.Types.Core.GameConfig = {
             y: cg.playerGravity,
             x: 0
           },
-          debug: true,
+          debug: false,
         },
       },
     scene: [
         Boot,
         Preloader,
         MainMenu,
+        Shop,
         MainGame,
-        GameOver,
-        Rank
+        GameOver
     ]
 };
 
