@@ -665,8 +665,8 @@ export class Game extends Scene {
             this.jumps -= 1;
             this.hitGround = false;
 
-            // Add slight camera shake on jump for impact
-            this.cameras.main.shake(100, 0.002);
+            // Jump camera shake disabled to keep repeated jumps visually stable.
+            // this.cameras.main.shake(100, 0.002);
         }
     }
 
