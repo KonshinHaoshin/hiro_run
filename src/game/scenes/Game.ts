@@ -2,12 +2,25 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 
 import Phaser from 'phaser';
-import settings, { getPlayerJumpCount, getStoredStars, setStoredStars } from '../../utils/config';
+import settings, {
+    getPlayerJumpCount,
+    getStartingScoreBonus,
+    getStoredStars,
+    hasEmmaCharmUpgrade,
+    setStoredStars,
+} from '../../utils/config';
 
 const GROUND_LEFT_EDGE_TEXTURE_KEY = 'ground-left-edge';
 const GROUND_RIGHT_EDGE_TEXTURE_KEY = 'ground-right-edge';
 const GROUND_CORNER_RADIUS = 18;
 const GROUND_EDGE_BLOCKS = 2;
+type GroundSourceImage = HTMLImageElement | HTMLCanvasElement;
+type ArcadeCollisionObject = Phaser.Types.Physics.Arcade.GameObjectWithBody |
+    Phaser.Physics.Arcade.Body |
+    Phaser.Tilemaps.Tile;
+type LethalHitSource = ArcadeCollisionObject |
+    Phaser.Physics.Arcade.Image |
+    Phaser.Physics.Arcade.Sprite;
 
 export class Game extends Scene {
     background: Phaser.GameObjects.Image;
@@ -39,6 +52,9 @@ export class Game extends Scene {
     currentSpearChance: number;
     currentBirdModulo: number | null;
     pointerJumpHandler: (pointer: Phaser.Input.Pointer) => void;
+    isDying: boolean;
+    emmaShieldActive: boolean;
+    emmaShieldLabel?: Phaser.GameObjects.Text;
 
     constructor() {
         super({
@@ -55,6 +71,8 @@ export class Game extends Scene {
 
     create() {
         this.isPaused = false;
+        this.isDying = false;
+        this.emmaShieldActive = hasEmmaCharmUpgrade();
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -83,14 +101,15 @@ export class Game extends Scene {
             color: '#fff',
         }).setScrollFactor(0, 1);
 
-        this.scoreValueLabel = this.add.text(150, 16, '0', {
+        const startingScore = getStartingScoreBonus();
+        this.scoreValueLabel = this.add.text(150, 16, `${startingScore}`, {
             fontFamily: 'Xiaolai',
             fontSize: '38px',
             color: '#fff',
         }).setScrollFactor(0, 1);
 
         // initialize score
-        this.score = 0;
+        this.score = startingScore;
         this.stars = getStoredStars();
         this.currentSpeed = settings.gameSpeed;
         this.currentGroundSpaceRange = [...settings.groundSpaceRange] as [number, number];
@@ -128,6 +147,14 @@ export class Game extends Scene {
             fontSize: '72px',
             color: '#f4f0d8',
         }).setOrigin(0.5).setScrollFactor(0, 1).setVisible(false);
+
+        if (hasEmmaCharmUpgrade()) {
+            this.emmaShieldLabel = this.add.text(settings.gameWidth - 308, 108, '艾玛护符: READY', {
+                fontFamily: 'Xiaolai',
+                fontSize: '26px',
+                color: '#fff4cf',
+            }).setScrollFactor(0, 1);
+        }
 
         // timer to increase score
         this.time.addEvent({
@@ -285,7 +312,7 @@ export class Game extends Scene {
             if (this.player.x > (platformRightEdge + 320)) {
                 this.createPlatform();
                 this.destroyPlatformVisuals(platformSprite);
-                this.platforms.remove(platform, true);
+                this.platforms.remove(platform, true, true);
             }
         });
     }
@@ -367,7 +394,7 @@ export class Game extends Scene {
     }
 
     createPlatformVisuals(x: number, width: number) {
-        const sourceImage = this.textures.get('ground').getSourceImage() as CanvasImageSource;
+        const sourceImage = this.textures.get('ground').getSourceImage() as GroundSourceImage;
         const height = Number(sourceImage.height);
         const edgeWidth = Math.min(height * GROUND_EDGE_BLOCKS, width / 2);
         const middleWidth = Math.max(0, width - edgeWidth * 2);
@@ -395,7 +422,7 @@ export class Game extends Scene {
             return;
         }
 
-        const sourceImage = this.textures.get('ground').getSourceImage() as CanvasImageSource;
+        const sourceImage = this.textures.get('ground').getSourceImage() as GroundSourceImage;
         const width = Number(sourceImage.width);
         const height = Number(sourceImage.height);
         const edgeWidth = Math.min(height * GROUND_EDGE_BLOCKS, width / 2);
@@ -407,7 +434,7 @@ export class Game extends Scene {
 
     createGroundEdgeTexture(
         key: string,
-        sourceImage: CanvasImageSource,
+        sourceImage: GroundSourceImage,
         sourceX: number,
         width: number,
         height: number,
@@ -533,15 +560,43 @@ export class Game extends Scene {
     }
 
     hitRaven() {
+        if (this.absorbLethalHit(this.bird)) {
+            return;
+        }
+
         this.bird.setTint(0xff1000);
         this.die();
     }
 
-    hitSpear() {
+    hitSpear(_player: ArcadeCollisionObject, spearObject: ArcadeCollisionObject) {
+        if (this.absorbLethalHit(spearObject)) {
+            return;
+        }
+
         this.die();
     }
 
-    collectStar(_player: Phaser.GameObjects.GameObject, starObject: Phaser.GameObjects.GameObject) {
+    absorbLethalHit(source: LethalHitSource) {
+        if (!this.emmaShieldActive) {
+            return false;
+        }
+
+        this.emmaShieldActive = false;
+        this.emmaShieldLabel?.setText('艾玛护符: BROKEN');
+        this.emmaShieldLabel?.setColor('#f3d7d0');
+        this.player.setTint(0xffea00);
+        this.cameras.main.flash(160, 255, 234, 0, true);
+        this.cameras.main.shake(180, 0.006);
+
+        if (source instanceof Phaser.Physics.Arcade.Image ||
+            source instanceof Phaser.Physics.Arcade.Sprite) {
+            source.disableBody(true, true);
+        }
+
+        return true;
+    }
+
+    collectStar(_player: ArcadeCollisionObject, starObject: ArcadeCollisionObject) {
         const star = starObject as Phaser.Physics.Arcade.Image;
         this.stars += 1;
         setStoredStars(this.stars);
@@ -561,11 +616,16 @@ export class Game extends Scene {
     }
 
     die() {
+        if (this.isDying) {
+            return;
+        }
+
+        this.isDying = true;
         !settings.sound && this.sound.play('gameOver');
         
         // Impact shake on death
         this.cameras.main.shake(400, 0.015);
-        this.cameras.main.flash(200, 201, 58, 47, 0.6); // Red flash
+        this.cameras.main.flash(200, 201, 58, 47, true); // Red flash
 
         this.player.anims.pause();
         this.bird.anims.pause();
@@ -605,8 +665,8 @@ export class Game extends Scene {
             this.jumps -= 1;
             this.hitGround = false;
 
-            // Add slight camera shake on jump for impact
-            this.cameras.main.shake(100, 0.002);
+            // Jump camera shake disabled to keep repeated jumps visually stable.
+            // this.cameras.main.shake(100, 0.002);
         }
     }
 

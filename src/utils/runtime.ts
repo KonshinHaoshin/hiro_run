@@ -11,6 +11,10 @@ type FullscreenElement = HTMLElement & {
     webkitRequestFullscreen?: () => Promise<void> | void;
 };
 
+type ScreenOrientationWithLock = ScreenOrientation & {
+    lock?: (orientation: string) => Promise<void>;
+};
+
 export const isMobileRuntime = () => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
         return false;
@@ -36,7 +40,7 @@ export const requestLandscapeOrientation = async () => {
         return false;
     }
 
-    const orientation = screen.orientation;
+    const orientation = screen.orientation as ScreenOrientationWithLock | undefined;
 
     if (!orientation || typeof orientation.lock !== "function") {
         return false;

@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const host = process.env.TAURI_DEV_HOST;
-
 const phasermsg = () => {
     return {
         name: 'phasermsg',
@@ -27,17 +25,13 @@ export default defineConfig({
         phasermsg()
     ],
     logLevel: 'warning',
-    envPrefix: ['VITE_', 'TAURI_ENV_*'],
+    envPrefix: ['VITE_'],
     server: {
-        host: host || false,
         port: 5173,
         strictPort: true,
-        watch: {
-            ignored: ['**/src-tauri/**'],
-        },
     },
     build: {
-        target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
+        target: 'es2020',
         rollupOptions: {
             output: {
                 manualChunks: {
@@ -45,8 +39,8 @@ export default defineConfig({
                 }
             }
         },
-        minify: process.env.TAURI_ENV_DEBUG ? false : 'terser',
-        sourcemap: !!process.env.TAURI_ENV_DEBUG,
+        minify: 'terser',
+        sourcemap: false,
         terserOptions: {
             compress: {
                 passes: 2
