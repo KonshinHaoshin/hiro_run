@@ -12,7 +12,7 @@ function App() {
     const [isLandscape, setIsLandscape] = useState(() => isLandscapeViewport());
     const isMobile = useMemo(() => isMobileRuntime(), []);
 
-    const currentScene = (_scene: Phaser.Scene) => {
+    const currentScene = () => {
         //
     };
 

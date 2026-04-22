@@ -1,9 +1,20 @@
-import Phaser, { Scene } from 'phaser';
-import config, { getStoredStars, hasTripleJumpUpgrade, setStoredStars, unlockTripleJumpUpgrade } from '../../utils/config';
+import { Scene } from 'phaser';
+import config, {
+    getStoredStars,
+    hasEmmaCharmUpgrade,
+    hasFamiliarRouteUpgrade,
+    hasTripleJumpUpgrade,
+    setStoredStars,
+    unlockEmmaCharmUpgrade,
+    unlockFamiliarRouteUpgrade,
+    unlockTripleJumpUpgrade,
+} from '../../utils/config';
 import { EventBus } from '../EventBus';
 
+type ShopItemId = 'triple_jump' | 'emma_charm' | 'familiar_route' | 'lucky_charm' | 'feather_cape';
+
 type ShopItemConfig = {
-    id: 'triple_jump' | 'lucky_charm' | 'feather_cape';
+    id: ShopItemId;
     title: string;
     subtitle: string;
     price: number;
@@ -24,19 +35,19 @@ const SHOP_ITEMS: ShopItemConfig[] = [
         available: true,
     },
     {
-        id: 'lucky_charm',
-        title: '幸运符',
-        subtitle: '之后更容易拿到星星',
-        price: 60,
-        available: false,
+        id: 'emma_charm',
+        title: '艾玛护符',
+        subtitle: '每局首次受击时\n护盾破碎免死',
+        price: 160,
+        available: true,
     },
     {
-        id: 'feather_cape',
-        title: '羽披风',
-        subtitle: '让二段跳更从容',
+        id: 'familiar_route',
+        title: '轻车熟路',
+        subtitle: '开局直达50秒难度\n计时也+50秒',
         price: 120,
-        available: false,
-    },
+        available: true,
+    }
 ];
 
 const SHOP_FONT = 'Xiaolai';
@@ -57,7 +68,7 @@ export class Shop extends Scene {
         this.add.rectangle(centerX, centerY, config.gameWidth, config.gameHeight, 0x100f12, 0.56);
 
         this.add.text(centerX, 108, 'SHOP', {
-            fontFamily: 'Xiaolai',
+            fontFamily: 'Bushiroad',
             fontSize: '86px',
             color: '#f3e8cd',
         }).setOrigin(0.5);
@@ -170,7 +181,7 @@ export class Shop extends Scene {
 
     createBackLink(x: number, y: number) {
         const label = this.add.text(0, 0, 'BACK MENU', {
-            fontFamily: 'Xiaolai',
+            fontFamily: 'Bushiroad',
             fontSize: '28px',
             color: '#f4f0d8',
         }).setOrigin(0.5);
@@ -186,7 +197,7 @@ export class Shop extends Scene {
     }
 
     getItemState(item: ShopItemConfig) {
-        if (item.id === 'triple_jump' && hasTripleJumpUpgrade()) {
+        if (this.isOwned(item.id)) {
             return 'owned';
         }
 
@@ -199,6 +210,22 @@ export class Shop extends Scene {
         }
 
         return 'available';
+    }
+
+    isOwned(itemId: ShopItemId) {
+        if (itemId === 'triple_jump') {
+            return hasTripleJumpUpgrade();
+        }
+
+        if (itemId === 'emma_charm') {
+            return hasEmmaCharmUpgrade();
+        }
+
+        if (itemId === 'familiar_route') {
+            return hasFamiliarRouteUpgrade();
+        }
+
+        return false;
     }
 
     getCardDisplay(item: ShopItemConfig): ShopCardDisplay {
@@ -248,13 +275,29 @@ export class Shop extends Scene {
     }
 
     buyItem(item: ShopItemConfig) {
-        if (item.id !== 'triple_jump' || hasTripleJumpUpgrade() || this.stars < item.price) {
+        if (!item.available || this.isOwned(item.id) || this.stars < item.price) {
             return;
         }
 
         this.stars -= item.price;
         setStoredStars(this.stars);
-        unlockTripleJumpUpgrade();
+        this.unlockItem(item.id);
         this.scene.restart();
+    }
+
+    unlockItem(itemId: ShopItemId) {
+        if (itemId === 'triple_jump') {
+            unlockTripleJumpUpgrade();
+            return;
+        }
+
+        if (itemId === 'emma_charm') {
+            unlockEmmaCharmUpgrade();
+            return;
+        }
+
+        if (itemId === 'familiar_route') {
+            unlockFamiliarRouteUpgrade();
+        }
     }
 }
