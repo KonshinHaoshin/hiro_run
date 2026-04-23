@@ -9,6 +9,7 @@ import settings, {
     hasEmmaCharmUpgrade,
     setStoredStars,
 } from '../../utils/config';
+import { submitRunResult } from '../../utils/shelterBridge';
 
 const GROUND_LEFT_EDGE_TEXTURE_KEY = 'ground-left-edge';
 const GROUND_RIGHT_EDGE_TEXTURE_KEY = 'ground-right-edge';
@@ -633,6 +634,7 @@ export class Game extends Scene {
         
         this.time.delayedCall(300, () => {
             this.scene.pause('Game');
+            submitRunResult(this.score, this.score);
             const bestScore = Math.max(this.score, Number(settings.bestScore));
             settings.bestScore = bestScore;
             localStorage.setItem('bestScore', String(bestScore));
