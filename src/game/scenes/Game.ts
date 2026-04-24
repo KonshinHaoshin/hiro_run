@@ -56,6 +56,7 @@ export class Game extends Scene {
     isDying: boolean;
     emmaShieldActive: boolean;
     emmaShieldLabel?: Phaser.GameObjects.Text;
+    hasHighlightedBest: boolean;
 
     constructor() {
         super({
@@ -74,6 +75,7 @@ export class Game extends Scene {
         this.isPaused = false;
         this.isDying = false;
         this.emmaShieldActive = hasEmmaCharmUpgrade();
+        this.hasHighlightedBest = false;
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -112,7 +114,6 @@ export class Game extends Scene {
         // initialize score
         this.score = startingScore;
         this.stars = getStoredStars();
-        this.currentSpeed = settings.gameSpeed;
         this.currentGroundSpaceRange = [...settings.groundSpaceRange] as [number, number];
         this.currentGroundSizeRange = [...settings.groundSizeRange] as [number, number];
         this.currentSpearChance = 0;
@@ -232,8 +233,8 @@ export class Game extends Scene {
 
         // set collisions
         this.physics.add.collider(this.platforms, this.player, this.hitFloor, undefined, this);
-        this.physics.add.collider(this.bird, this.player, this.hitRaven, undefined, this);
-        this.physics.add.collider(this.player, this.spearGroup, this.hitSpear, undefined, this);
+        this.physics.add.overlap(this.bird, this.player, this.hitRaven, undefined, this);
+        this.physics.add.overlap(this.player, this.spearGroup, this.hitSpear, undefined, this);
         this.physics.add.overlap(this.player, this.starsGroup, this.collectStar, undefined, this);
         this.syncDifficulty();
 
@@ -306,40 +307,52 @@ export class Game extends Scene {
     }
 
     checkPlatform() {
+        const toRemove: Phaser.Physics.Arcade.Sprite[] = [];
         this.platforms.getChildren().forEach((platform) => {
             const platformSprite = platform as Phaser.Physics.Arcade.Sprite;
             const platformRightEdge = platformSprite.x + platformSprite.displayWidth;
 
             if (this.player.x > (platformRightEdge + 320)) {
                 this.createPlatform();
-                this.destroyPlatformVisuals(platformSprite);
-                this.platforms.remove(platform, true, true);
+                toRemove.push(platformSprite);
             }
+        });
+        toRemove.forEach((platformSprite) => {
+            this.destroyPlatformVisuals(platformSprite);
+            this.platforms.remove(platformSprite, true, true);
         });
     }
 
     checkStars() {
+        const toRemove: Phaser.Physics.Arcade.Image[] = [];
         this.starsGroup.getChildren().forEach((starObject) => {
             const star = starObject as Phaser.Physics.Arcade.Image;
 
             if (this.player.x > star.x + 1000) {
-                this.starsGroup.remove(star, true, true);
+                toRemove.push(star);
             }
+        });
+        toRemove.forEach((star) => {
+            this.starsGroup.remove(star, true, true);
         });
     }
 
     checkSpears() {
+        const toRemove: Phaser.Physics.Arcade.Image[] = [];
         this.spearGroup.getChildren().forEach((spearObject) => {
             const spear = spearObject as Phaser.Physics.Arcade.Image;
 
             if (this.player.x > spear.x + 1000) {
-                this.spearGroup.remove(spear, true, true);
+                toRemove.push(spear);
             }
+        });
+        toRemove.forEach((spear) => {
+            this.spearGroup.remove(spear, true, true);
         });
     }
 
     movement() {
-        if (this.bird.active) {
+        if (this.bird.active && this.bird.anims.currentAnim?.key !== 'fly') {
             this.bird.anims.play('fly', true);
         }
         if (this.player.body?.touching.down) {
@@ -586,6 +599,7 @@ export class Game extends Scene {
         this.emmaShieldLabel?.setText('艾玛护符: BROKEN');
         this.emmaShieldLabel?.setColor('#f3d7d0');
         this.player.setTint(0xffea00);
+        this.player.setVelocityX(this.currentSpeed);
         this.cameras.main.flash(160, 255, 234, 0, true);
         this.cameras.main.shake(180, 0.006);
 
@@ -688,7 +702,10 @@ export class Game extends Scene {
         if (this.score > Number(this.bestScore)) {
             this.bestScore = this.score;
             this.bestScoreValueLabel.setText(`${this.score}`);
-            this.bestScoreValueLabel.setTint(0xffea00); // Highlight best score
+            if (!this.hasHighlightedBest) {
+                this.bestScoreValueLabel.setTint(0xffea00);
+                this.hasHighlightedBest = true;
+            }
         }
 
         this.syncDifficulty();

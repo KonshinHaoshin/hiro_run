@@ -43,5 +43,5 @@ export default {
     gameHeight: 720,
     gameSpeed: 450,
     bestScore: Number(localStorage.getItem('bestScore') || '0'),
-    sound: Boolean(localStorage.getItem('sound') === 'true') ?? true
+    sound: (localStorage.getItem('sound') ?? 'true') === 'true'
 };
