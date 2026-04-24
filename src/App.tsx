@@ -12,10 +12,6 @@ function App() {
     const [isLandscape, setIsLandscape] = useState(() => isLandscapeViewport());
     const isMobile = useMemo(() => isMobileRuntime(), []);
 
-    const currentScene = () => {
-        //
-    };
-
     useEffect(() => {
         const cleanupBridge = initShelterBridge();
 
@@ -59,7 +55,7 @@ function App() {
                 isMobile && !isLandscape ? "is-portrait" : "",
             ].filter(Boolean).join(" ")}
         >
-            <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
+            <PhaserGame ref={phaserRef} />
             {isMobile && !isLandscape && (
                 <div className="mobile-rotate-hint">
                     <div className="mobile-rotate-card">

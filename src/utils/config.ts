@@ -33,6 +33,29 @@ export const getPlayerJumpCount = () => (hasTripleJumpUpgrade() ? 3 : BASE_JUMPS
 
 export const getStartingScoreBonus = () => (hasFamiliarRouteUpgrade() ? FAMILIAR_ROUTE_SCORE_BONUS : 0);
 
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    const win = window as Window & { __hiroDebug?: Record<string, unknown> };
+    win.__hiroDebug = {
+        ...win.__hiroDebug,
+        setStars: (n: number) => setStoredStars(n),
+        getStars: () => getStoredStars(),
+        unlockAll: () => {
+            unlockTripleJumpUpgrade();
+            unlockEmmaCharmUpgrade();
+            unlockFamiliarRouteUpgrade();
+            setStoredStars(9999);
+        },
+        resetAll: () => {
+            localStorage.removeItem(STARS_STORAGE_KEY);
+            localStorage.removeItem(TRIPLE_JUMP_STORAGE_KEY);
+            localStorage.removeItem(EMMA_CHARM_STORAGE_KEY);
+            localStorage.removeItem(FAMILIAR_ROUTE_STORAGE_KEY);
+            localStorage.removeItem('bestScore');
+            localStorage.removeItem('sound');
+        },
+    };
+}
+
 export default {
     groundSpaceRange: [100, 200],
     groundSizeRange: [50, 801],
@@ -43,5 +66,5 @@ export default {
     gameHeight: 720,
     gameSpeed: 450,
     bestScore: Number(localStorage.getItem('bestScore') || '0'),
-    sound: Boolean(localStorage.getItem('sound') === 'true') ?? true
+    sound: (localStorage.getItem('sound') ?? 'true') === 'true'
 };

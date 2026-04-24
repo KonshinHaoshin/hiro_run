@@ -9,6 +9,7 @@ import settings, {
     hasEmmaCharmUpgrade,
     setStoredStars,
 } from '../../utils/config';
+import { submitRunResult } from '../../utils/shelterBridge';
 
 const GROUND_LEFT_EDGE_TEXTURE_KEY = 'ground-left-edge';
 const GROUND_RIGHT_EDGE_TEXTURE_KEY = 'ground-right-edge';
@@ -54,7 +55,9 @@ export class Game extends Scene {
     pointerJumpHandler: (pointer: Phaser.Input.Pointer) => void;
     isDying: boolean;
     emmaShieldActive: boolean;
-    emmaShieldLabel?: Phaser.GameObjects.Text;
+    shieldGraphics?: Phaser.GameObjects.Graphics;
+    shieldEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+    hasHighlightedBest: boolean;
 
     constructor() {
         super({
@@ -73,6 +76,7 @@ export class Game extends Scene {
         this.isPaused = false;
         this.isDying = false;
         this.emmaShieldActive = hasEmmaCharmUpgrade();
+        this.hasHighlightedBest = false;
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -111,7 +115,6 @@ export class Game extends Scene {
         // initialize score
         this.score = startingScore;
         this.stars = getStoredStars();
-        this.currentSpeed = settings.gameSpeed;
         this.currentGroundSpaceRange = [...settings.groundSpaceRange] as [number, number];
         this.currentGroundSizeRange = [...settings.groundSizeRange] as [number, number];
         this.currentSpearChance = 0;
@@ -149,11 +152,7 @@ export class Game extends Scene {
         }).setOrigin(0.5).setScrollFactor(0, 1).setVisible(false);
 
         if (hasEmmaCharmUpgrade()) {
-            this.emmaShieldLabel = this.add.text(settings.gameWidth - 308, 108, '艾玛护符: READY', {
-                fontFamily: 'Xiaolai',
-                fontSize: '26px',
-                color: '#fff4cf',
-            }).setScrollFactor(0, 1);
+            this.createShieldEffect();
         }
 
         // timer to increase score
@@ -231,8 +230,8 @@ export class Game extends Scene {
 
         // set collisions
         this.physics.add.collider(this.platforms, this.player, this.hitFloor, undefined, this);
-        this.physics.add.collider(this.bird, this.player, this.hitRaven, undefined, this);
-        this.physics.add.collider(this.player, this.spearGroup, this.hitSpear, undefined, this);
+        this.physics.add.overlap(this.bird, this.player, this.hitRaven, undefined, this);
+        this.physics.add.overlap(this.player, this.spearGroup, this.hitSpear, undefined, this);
         this.physics.add.overlap(this.player, this.starsGroup, this.collectStar, undefined, this);
         this.syncDifficulty();
 
@@ -295,6 +294,7 @@ export class Game extends Scene {
         }
         this.movement();
         this.updateWardenChase();
+        this.updateShieldPosition();
         this.checkPlatform();
         this.checkStars();
         this.checkSpears();
@@ -305,40 +305,52 @@ export class Game extends Scene {
     }
 
     checkPlatform() {
+        const toRemove: Phaser.Physics.Arcade.Sprite[] = [];
         this.platforms.getChildren().forEach((platform) => {
             const platformSprite = platform as Phaser.Physics.Arcade.Sprite;
             const platformRightEdge = platformSprite.x + platformSprite.displayWidth;
 
             if (this.player.x > (platformRightEdge + 320)) {
                 this.createPlatform();
-                this.destroyPlatformVisuals(platformSprite);
-                this.platforms.remove(platform, true, true);
+                toRemove.push(platformSprite);
             }
+        });
+        toRemove.forEach((platformSprite) => {
+            this.destroyPlatformVisuals(platformSprite);
+            this.platforms.remove(platformSprite, true, true);
         });
     }
 
     checkStars() {
+        const toRemove: Phaser.Physics.Arcade.Image[] = [];
         this.starsGroup.getChildren().forEach((starObject) => {
             const star = starObject as Phaser.Physics.Arcade.Image;
 
             if (this.player.x > star.x + 1000) {
-                this.starsGroup.remove(star, true, true);
+                toRemove.push(star);
             }
+        });
+        toRemove.forEach((star) => {
+            this.starsGroup.remove(star, true, true);
         });
     }
 
     checkSpears() {
+        const toRemove: Phaser.Physics.Arcade.Image[] = [];
         this.spearGroup.getChildren().forEach((spearObject) => {
             const spear = spearObject as Phaser.Physics.Arcade.Image;
 
             if (this.player.x > spear.x + 1000) {
-                this.spearGroup.remove(spear, true, true);
+                toRemove.push(spear);
             }
+        });
+        toRemove.forEach((spear) => {
+            this.spearGroup.remove(spear, true, true);
         });
     }
 
     movement() {
-        if (this.bird.active) {
+        if (this.bird.active && this.bird.anims.currentAnim?.key !== 'fly') {
             this.bird.anims.play('fly', true);
         }
         if (this.player.body?.touching.down) {
@@ -582,9 +594,9 @@ export class Game extends Scene {
         }
 
         this.emmaShieldActive = false;
-        this.emmaShieldLabel?.setText('艾玛护符: BROKEN');
-        this.emmaShieldLabel?.setColor('#f3d7d0');
+        this.destroyShieldEffect();
         this.player.setTint(0xffea00);
+        this.player.setVelocityX(this.currentSpeed);
         this.cameras.main.flash(160, 255, 234, 0, true);
         this.cameras.main.shake(180, 0.006);
 
@@ -594,6 +606,90 @@ export class Game extends Scene {
         }
 
         return true;
+    }
+
+    createShieldEffect() {
+        const particleGraphics = this.make.graphics({ x: 0, y: 0 });
+        particleGraphics.fillStyle(0xffffff, 1);
+        particleGraphics.fillCircle(4, 4, 4);
+        particleGraphics.generateTexture('shield-particle', 8, 8);
+        particleGraphics.destroy();
+
+        this.shieldGraphics = this.add.graphics();
+        this.shieldGraphics.setDepth(7);
+
+        const emitter = this.add.particles(0, 0, 'shield-particle', {
+            follow: this.player,
+            followOffset: { x: 0, y: -8 },
+            speed: { min: 8, max: 40 },
+            scale: { start: 0.8, end: 0 },
+            alpha: { start: 0.9, end: 0 },
+            lifespan: 500,
+            frequency: 40,
+            quantity: 3,
+            blendMode: 'ADD',
+            tint: [0xff6699, 0xff88cc, 0xffaadd, 0xffffff],
+            emitZone: {
+                type: 'edge',
+                source: new Phaser.Geom.Circle(0, 0, 52),
+                quantity: 64,
+            },
+        });
+        this.shieldEmitter = emitter;
+    }
+
+    updateShieldPosition() {
+        if (!this.shieldGraphics || !this.emmaShieldActive) {
+            return;
+        }
+
+        const shieldRadius = 56;
+        const t = this.time.now / 500;
+        const breathe = 1 + Math.sin(t * 1.4) * 0.06;
+
+        this.shieldGraphics.clear();
+
+        this.shieldGraphics.fillStyle(0xff88aa, 0.28 * breathe);
+        this.shieldGraphics.fillCircle(this.player.x, this.player.y - 2, shieldRadius * breathe);
+
+        this.shieldGraphics.lineStyle(3, 0xffaacc, 0.75);
+        this.shieldGraphics.strokeCircle(this.player.x, this.player.y - 2, shieldRadius * breathe);
+
+        this.shieldGraphics.lineStyle(1.5, 0xffccdd, 0.3);
+        this.shieldGraphics.strokeCircle(this.player.x, this.player.y - 2, (shieldRadius + 8) * breathe);
+
+        const dotCount = 6;
+        for (let i = 0; i < dotCount; i++) {
+            const angle = (Math.PI * 2 * i) / dotCount + t * 0.8;
+            const dotX = this.player.x + Math.cos(angle) * shieldRadius * breathe;
+            const dotY = this.player.y - 2 + Math.sin(angle) * shieldRadius * breathe;
+            const dotAlpha = 0.5 + Math.sin(t * 2 + i) * 0.3;
+            this.shieldGraphics.fillStyle(0xffffff, dotAlpha);
+            this.shieldGraphics.fillCircle(dotX, dotY, 3);
+        }
+    }
+
+    destroyShieldEffect() {
+        if (this.shieldEmitter) {
+            this.shieldEmitter.explode(24, this.player.x, this.player.y - 2);
+            this.shieldEmitter.stop();
+            this.time.delayedCall(1200, () => {
+                this.shieldEmitter?.destroy();
+                this.shieldEmitter = undefined;
+            });
+        }
+
+        if (this.shieldGraphics) {
+            this.tweens.add({
+                targets: this.shieldGraphics,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    this.shieldGraphics?.destroy();
+                    this.shieldGraphics = undefined;
+                },
+            });
+        }
     }
 
     collectStar(_player: ArcadeCollisionObject, starObject: ArcadeCollisionObject) {
@@ -633,6 +729,7 @@ export class Game extends Scene {
         
         this.time.delayedCall(300, () => {
             this.scene.pause('Game');
+            submitRunResult(this.score, this.score);
             const bestScore = Math.max(this.score, Number(settings.bestScore));
             settings.bestScore = bestScore;
             localStorage.setItem('bestScore', String(bestScore));
@@ -686,7 +783,10 @@ export class Game extends Scene {
         if (this.score > Number(this.bestScore)) {
             this.bestScore = this.score;
             this.bestScoreValueLabel.setText(`${this.score}`);
-            this.bestScoreValueLabel.setTint(0xffea00); // Highlight best score
+            if (!this.hasHighlightedBest) {
+                this.bestScoreValueLabel.setTint(0xffea00);
+                this.hasHighlightedBest = true;
+            }
         }
 
         this.syncDifficulty();
