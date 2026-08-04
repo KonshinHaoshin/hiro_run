@@ -1,0 +1,62 @@
+{
+  "renako": {
+    "name": "甘织冷奈子",
+    "color": "#ff70b8"
+  },
+  "haruna": {
+    "name": "甘织瑠奈",
+    "color": "#b65185"
+  },
+  "ajisai": {
+    "name": "葡名紫阳花",
+    "color": "#9caa21"
+  },
+  "mai": {
+    "name": "王塚真唯",
+    "color": "#fccc66"
+  },
+  "seira": {
+    "name": "星来",
+    "color": "#66cc99"
+  },
+  "minato": {
+    "name": "凑",
+    "color": "#243d03"
+  },
+  "satsuki": {
+    "name": "琴纱月",
+    "color": "#6699cc"
+  },
+  "kaho": {
+    "name": "小柳香穗",
+    "color": "#ff99cc"
+  },
+  "yuko": {
+    "name": "照季雅子",
+    "color": "#cc9966"
+  },
+  "lucy": {
+    "name": "小笠西",
+    "color": "#ccccff"
+  },
+  "hitoe": {
+    "name": "花取",
+    "color": "#996666"
+  },
+  "doctor": {
+    "name": "医师",
+    "color": "#cccccc"
+  },
+  "mother": {
+    "name": "甘织母亲",
+    "color": "#cc9999"
+  },
+  "informant": {
+    "name": "线人",
+    "color": "#999999"
+  },
+  "unknown": {
+    "name": "？？？",
+    "color": "#ffffff"
+  }
+}
